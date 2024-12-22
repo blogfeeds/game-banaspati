@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banaspati Gameplay</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #121212;
+            color: #ffffff;
+        }
+        #game-container {
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+			color: #121212;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        #player {
+            width: 60px;
+            height: 60px;
+            position: absolute;
+            bottom: 30%;
+            left: 130px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: left 0.1s ease-out;
+        }
+        .fireball {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        #score {
+           display: none;
+        }
+        #level {
+            position: absolute;
+            top: 40px;
+            left: 10px;
+            font-size: 18px;
+        }
+        #timer {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            font-size: 18px;
+        }
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            display: none;
+        }
+        #restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #2ecc71;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 14px;
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="score">Score: 0</div>
+        <div id="level">Level: 1</div>
+        <div id="timer">Sisa waktu: 3:00</div>
+        <div id="controls">gamebanaspati.pages.dev</div>
+        <div id="game-over">
+            <h2>Game Over</h2>
+            <p>Skor kamu: <span id="final-score"></span></p>
+            <button id="restart-btn">Main lagi</button>
+        </div>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('game-container');
+        const scoreElement = document.getElementById('score');
+        const levelElement = document.getElementById('level');
+        const timerElement = document.getElementById('timer');
+        const gameOverElement = document.getElementById('game-over');
+        const finalScoreElement = document.getElementById('final-score');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // Ganti string base64 ini dengan URL gambar PNG karakter Anda
+        const playerImageRight = 'right.webp';
+        const playerImageLeft = 'left.webp';
+        
+        // Ganti string base64 ini dengan URL gambar GIF bola api Anda
+        const fireballGif = 'banaspati.webp';
+
+        player.style.backgroundImage = `url('${playerImageRight}')`;
+
+        let score = 0;
+        let level = 1;
+        let gameOver = false;
+        let playerX = 130;
+        const playerSpeed = 7;
+        let lastDirection = 1; // 1 for right, -1 for left
+        let levelDuration = 180; // 3 minutes in seconds
+        let timeLeft = levelDuration;
+        let fireballSpeed = 1;
+        let fireballInterval;
+
+        function movePlayer(direction) {
+            if (gameOver) return;
+            playerX += direction * playerSpeed;
+            playerX = Math.max(0, Math.min(playerX, gameContainer.offsetWidth - player.offsetWidth));
+            player.style.left = playerX + 'px';
+            if (direction !== lastDirection) {
+                lastDirection = direction;
+                player.style.backgroundImage = `url('${direction > 0 ? playerImageRight : playerImageLeft}')`;
+            }
+        }
+
+        function handleKeydown(e) {
+            if (e.key === 'ArrowLeft') {
+                movePlayer(-1);
+            } else if (e.key === 'ArrowRight') {
+                movePlayer(1);
+            }
+        }
+
+        function handleTouch(e) {
+            if (gameOver) return;
+            const touch = e.touches[0];
+            const gameRect = gameContainer.getBoundingClientRect();
+            const newX = touch.clientX - gameRect.left - player.offsetWidth / 2;
+            const direction = newX > playerX ? 1 : -1;
+            movePlayer(direction);
+        }
+
+        function createFireball() {
+            if (gameOver) return;
+            const fireball = document.createElement('div');
+            fireball.classList.add('fireball');
+            fireball.style.backgroundImage = `url('${fireballGif}')`;
+            fireball.style.left = Math.random() * (gameContainer.offsetWidth - 30) + 'px';
+            fireball.style.top = '-30px';
+            gameContainer.appendChild(fireball);
+
+            const fall = () => {
+                const currentTop = parseInt(fireball.style.top);
+                if (currentTop > gameContainer.offsetHeight) {
+                    if (gameContainer.contains(fireball)) {
+                        gameContainer.removeChild(fireball);
+                        updateScore(1);
+                    }
+                } else {
+                    fireball.style.top = (currentTop + fireballSpeed) + 'px';
+                    requestAnimationFrame(fall);
+                }
+            };
+
+            requestAnimationFrame(fall);
+        }
+
+        function checkCollision() {
+            if (gameOver) return;
+            const playerRect = player.getBoundingClientRect();
+            const fireballs = document.getElementsByClassName('fireball');
+
+            for (let fireball of fireballs) {
+                const fireballRect = fireball.getBoundingClientRect();
+                if (
+                    playerRect.left < fireballRect.right &&
+                    playerRect.right > fireballRect.left &&
+                    playerRect.top < fireballRect.bottom &&
+                    playerRect.bottom > fireballRect.top
+                ) {
+                    endGame();
+                    return;
+                }
+            }
+        }
+
+        function updateScore(points) {
+            score += points;
+            scoreElement.textContent = `Score: ${score}`;
+        }
+
+        function updateLevel() {
+            level++;
+            levelElement.textContent = `Level: ${level}`;
+            fireballSpeed += 0.5;
+            timeLeft = levelDuration;
+            clearInterval(fireballInterval);
+            fireballInterval = setInterval(createFireball, 1000 - (level * 50));
+        }
+
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerElement.textContent = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            if (timeLeft > 0) {
+                timeLeft--;
+            } else {
+                updateLevel();
+            }
+        }
+
+        function endGame() {
+            gameOver = true;
+            finalScoreElement.textContent = score;
+            gameOverElement.style.display = 'flex';
+            clearInterval(fireballInterval);
+        }
+
+        function restartGame() {
+            gameOver = false;
+            score = 0;
+            level = 1;
+            playerX = 130;
+            timeLeft = levelDuration;
+            fireballSpeed = 3;
+            player.style.left = playerX + 'px';
+            player.style.backgroundImage = `url('${playerImageRight}')`;
+            scoreElement.textContent = 'Score: 0';
+            levelElement.textContent = 'Level: 1';
+            gameOverElement.style.display = 'none';
+            const fireballs = document.getElementsByClassName('fireball');
+            while (fireballs.length > 0) {
+                fireballs[0].parentNode.removeChild(fireballs[0]);
+            }
+            clearInterval(fireballInterval);
+            fireballInterval = setInterval(createFireball, 1000);
+        }
+
+        document.addEventListener('keydown', handleKeydown);
+        gameContainer.addEventListener('touchmove', handleTouch);
+        restartBtn.addEventListener('click', restartGame);
+
+        fireballInterval = setInterval(createFireball, 1000);
+        setInterval(checkCollision, 100);
+        setInterval(updateTimer, 1000);
+    </script>
+	<script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Mendapatkan waktu saat ini
+            const currentTime = new Date().toUTCString();
+            // Membuat elemen meta
+            const metaTag = document.createElement('meta');
+            metaTag.name = "last-updated";
+            metaTag.content = currentTime;
+
+            // Menambahkan elemen meta ke dalam head
+            document.head.appendChild(metaTag);
+        });
+    </script>
+</body>
+</html>
