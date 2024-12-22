@@ -306,5 +306,29 @@ videoFrame.msRequestFullscreen();
             document.head.appendChild(metaTag);
         });
     </script>
+ <script>
+        const url = encodeURIComponent(window.location.href);
+        const text = encodeURIComponent("Check this out!");
+
+        function shareOnFacebook() {
+            const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+            window.open(facebookUrl, '_blank');
+        }
+
+        function shareOnTwitter() {
+            const twitterUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+            window.open(twitterUrl, '_blank');
+        }
+
+        function shareOnWhatsApp() {
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${text} ${url}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        function shareOnTelegram() {
+            const telegramUrl = `https://t.me/share/url?url=${url}&text=${text}`;
+            window.open(telegramUrl, '_blank');
+        }
+    </script>	
 </body>
 </html>
